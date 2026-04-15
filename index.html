@@ -3,177 +3,171 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sistema Gestione Ordini 2026</title>
+    <title>Gestione Ordini 2026</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
     <style>
-        body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; color: #333; margin: 0; padding: 20px; }
-        .container { max-width: 1000px; margin: auto; }
+        :root { --primary: #2c3e50; --secondary: #3498db; --success: #27ae60; --bg: #f4f7f6; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); margin: 0; padding: 10px; }
+        .card { background: white; max-width: 900px; margin: 20px auto; padding: 25px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
+        h2 { color: var(--primary); border-left: 5px solid var(--secondary); padding-left: 15px; margin-bottom: 25px; }
         
-        /* Dashboard Pubblica */
-        .dashboard { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); margin-bottom: 30px; }
-        h2 { color: #2c3e50; border-bottom: 3px solid #3498db; padding-bottom: 10px; }
-        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
-        th { background: #2c3e50; color: white; padding: 12px; text-align: left; }
+        /* Tabella */
+        .table-container { overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.9em; }
+        th { background: var(--primary); color: white; padding: 12px; text-align: left; }
         td { padding: 12px; border-bottom: 1px solid #eee; }
-        .status { padding: 5px 10px; border-radius: 20px; font-size: 0.85em; font-weight: bold; }
-        .stato-attesa { background: #fff3cd; color: #856404; }
-        .stato-consegnato { background: #d4edda; color: #155724; }
+        .badge { padding: 4px 8px; border-radius: 12px; font-size: 0.8em; font-weight: bold; }
+        .badge-attesa { background: #ffeaa7; color: #d63031; }
+        .badge-ok { background: #55efc4; color: #00b894; }
 
-        /* Area Riservata */
-        .area-riservata { background: #fff; padding: 20px; border-radius: 12px; border: 2px dashed #bdc3c7; }
+        /* Form Inserimento */
+        .admin-zone { border: 2px dashed #ccc; margin-top: 40px; padding: 20px; border-radius: 12px; }
         .hidden { display: none; }
-        .form-group { margin-bottom: 15px; }
-        input, select { width: 100%; padding: 10px; margin-top: 5px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; }
-        .btn { padding: 12px 20px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; width: 100%; }
-        .btn-login { background: #2c3e50; color: white; }
-        .btn-add { background: #3498db; color: white; margin-bottom: 10px; width: auto; }
-        .btn-save { background: #27ae60; color: white; font-size: 1.1em; }
-        
-        .row-prodotto { display: flex; gap: 10px; background: #f9f9f9; padding: 10px; border-radius: 8px; margin-bottom: 10px; align-items: center; }
+        .input-group { margin-bottom: 15px; }
+        input, select { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; }
+        .row-item { display: flex; gap: 10px; background: #f9f9f9; padding: 10px; border-radius: 8px; margin-bottom: 10px; }
+        .btn { cursor: pointer; border: none; border-radius: 6px; font-weight: bold; transition: 0.3s; }
+        .btn-main { background: var(--secondary); color: white; padding: 12px 20px; width: 100%; font-size: 1.1em; }
+        .btn-add { background: #95a5a6; color: white; padding: 8px 15px; margin-bottom: 15px; }
+        .btn-login { background: var(--primary); color: white; padding: 10px; width: 100%; }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <div class="dashboard">
-        <h2>📋 Elenco Ordini Completo</h2>
-        <div id="loading">Caricamento dati dal server...</div>
-        <table id="tabellaPubblica" style="display:none;">
+<div class="card">
+    <h2>📋 Registro Ordini</h2>
+    <div class="table-container">
+        <table id="dashTable">
             <thead>
                 <tr>
-                    <th>ID</th>
-                    <th>Data Emissione</th>
+                    <th>Data</th>
                     <th>Cliente</th>
                     <th>Prodotto</th>
                     <th>Q.tà</th>
                     <th>Stato</th>
                 </tr>
             </thead>
-            <tbody id="corpoTabella"></tbody>
+            <tbody id="dashBody">
+                <tr><td colspan="5" style="text-align:center;">Caricamento in corso...</td></tr>
+            </tbody>
         </table>
     </div>
+</div>
 
-    <div class="area-riservata">
-        <div id="loginBox">
-            <h3>🔐 Accesso Area Inserimento</h3>
-            <input type="password" id="passInput" placeholder="Inserisci Password Amministratore">
-            <button class="btn btn-login" onclick="sblocca()">Accedi per inserire</button>
+<div class="card admin-zone">
+    <div id="loginBox">
+        <h3 style="text-align:center;">🔒 Area Riservata Inserimento</h3>
+        <input type="password" id="sysPass" placeholder="Inserisci Password">
+        <button class="btn btn-login" style="margin-top:10px" onclick="checkIn()">Accedi</button>
+    </div>
+
+    <div id="entryForm" class="hidden">
+        <h3>➕ Nuovo Ordine Cliente</h3>
+        <div class="input-group">
+            <input type="text" id="custName" placeholder="Nome Cliente">
+        </div>
+        <div class="input-group">
+            <label>Data Emissione:</label>
+            <input type="date" id="orderDate">
         </div>
 
-        <div id="moduloInserimento" class="hidden">
-            <h3>➕ Inserisci Nuovo Ordine</h3>
-            <div class="form-group">
-                <label>Nome Cliente:</label>
-                <input type="text" id="cliente" placeholder="Es: Mario Rossi">
+        <div id="itemsList">
+            <div class="row-item">
+                <input type="text" placeholder="Nome Prodotto" class="in-prod" style="flex:3">
+                <input type="number" placeholder="Q.tà" class="in-qty" value="1" style="flex:1">
+                <select class="in-stat" style="flex:1.5">
+                    <option value="In Attesa">In Attesa</option>
+                    <option value="Consegnato">Consegnato</option>
+                </select>
             </div>
-            <div class="form-group">
-                <label>Data di Emissione:</label>
-                <input type="date" id="dataEmissione">
-            </div>
-
-            <div id="listaProdotti">
-                <div class="row-prodotto">
-                    <input type="text" placeholder="Prodotto" class="p-nome" style="flex:3;">
-                    <input type="number" placeholder="Q.tà" class="p-qta" value="1" style="flex:1;">
-                    <select class="p-stato" style="flex:1.5;">
-                        <option value="In Attesa">In Attesa</option>
-                        <option value="Consegnato">Consegnato</option>
-                    </select>
-                </div>
-            </div>
-
-            <button class="btn btn-add" onclick="aggiungiRiga()">+ Aggiungi un altro prodotto</button>
-            <button class="btn btn-save" id="btnSalva" onclick="inviaDati()">SALVA ORDINE SU EXCEL</button>
-            <p id="statusNotifica" style="text-align:center; font-weight:bold;"></p>
         </div>
+
+        <button class="btn btn-add" onclick="addRow()">+ Aggiungi riga prodotto</button>
+        <button class="btn btn-main" id="saveBtn" onclick="submitData()">REGISTRA ORDINE IN EXCEL</button>
+        <p id="notifica" style="text-align:center; margin-top:15px;"></p>
     </div>
 </div>
 
 <script>
-    const SCRIPT_URL = 'INSERISCI_QUI_IL_TUO_URL_APPS_SCRIPT';
+    // --- CONFIGURAZIONE ---
+    const SCRIPT_URL = 'IL_TUO_URL_APPS_SCRIPT_QUI'; // Incolla qui l'URL /exec
     const CSV_URL = 'https://docs.google.com/spreadsheets/d/1uwMmxJAPnlgceN3pNalS_JA9onxGd9hBO3xvMGyC4Lc/export?format=csv';
-    const PASSWORD_ADMIN = "1234";
+    const PASS_KEY = "1234";
 
-    // CARICA TABELLA PUBBLICA
-    function caricaDati() {
+    // CARICAMENTO DASHBOARD
+    function fetchTable() {
         Papa.parse(CSV_URL, {
-            download: true,
-            header: true,
-            complete: function(results) {
-                const data = results.data;
-                const body = document.getElementById('corpoTabella');
+            download: true, header: true,
+            complete: function(res) {
+                const body = document.getElementById('dashBody');
                 body.innerHTML = "";
-                data.forEach(row => {
-                    if(!row.ID) return;
-                    let classeStato = row.Stato === "Consegnato" ? "stato-consegnato" : "stato-attesa";
-                    body.innerHTML += `
-                        <tr>
-                            <td>${row.ID}</td>
-                            <td>${row['Data Emissione'] || row.Data}</td>
-                            <td>${row.Cliente}</td>
-                            <td>${row.Prodotto}</td>
-                            <td>${row['Quantità'] || row.Qta}</td>
-                            <td><span class="status ${classeStato}">${row.Stato}</span></td>
-                        </tr>`;
+                res.data.forEach(row => {
+                    if(!row.Cliente) return;
+                    let stBadge = row.Stato === "Consegnato" ? "badge-ok" : "badge-attesa";
+                    body.innerHTML += `<tr>
+                        <td>${row['Data Emissione'] || row.Data}</td>
+                        <td><b>${row.Cliente}</b></td>
+                        <td>${row.Prodotto}</td>
+                        <td>${row['Quantità'] || row.Qta}</td>
+                        <td><span class="badge ${stBadge}">${row.Stato}</span></td>
+                    </tr>`;
                 });
-                document.getElementById('loading').style.display = 'none';
-                document.getElementById('tabellaPubblica').style.display = 'table';
             }
         });
     }
 
-    // GESTIONE AREA RISERVATA
-    function sblocca() {
-        if(document.getElementById('passInput').value === PASSWORD_ADMIN) {
+    // GESTIONE ACCESSO
+    function checkIn() {
+        if(document.getElementById('sysPass').value === PASS_KEY) {
             document.getElementById('loginBox').classList.add('hidden');
-            document.getElementById('moduloInserimento').classList.remove('hidden');
-            document.getElementById('dataEmissione').valueAsDate = new Date();
-        } else { alert("Password errata!"); }
+            document.getElementById('entryForm').classList.remove('hidden');
+            document.getElementById('orderDate').valueAsDate = new Date();
+        } else { alert("Password Errata"); }
     }
 
-    function aggiungiRiga() {
+    function addRow() {
         const div = document.createElement('div');
-        div.className = 'row-prodotto';
+        div.className = 'row-item';
         div.innerHTML = `
-            <input type="text" placeholder="Prodotto" class="p-nome" style="flex:3;">
-            <input type="number" placeholder="Q.tà" class="p-qta" value="1" style="flex:1;">
-            <select class="p-stato" style="flex:1.5;">
-                <option value="In Attesa">In Attesa</option>
-                <option value="Consegnato">Consegnato</option>
-            </select>
+            <input type="text" placeholder="Nome Prodotto" class="in-prod" style="flex:3">
+            <input type="number" placeholder="Q.tà" class="in-qty" value="1" style="flex:1">
+            <select class="in-stat" style="flex:1.5"><option value="In Attesa">In Attesa</option><option value="Consegnato">Consegnato</option></select>
             <button onclick="this.parentElement.remove()" style="background:none; border:none; cursor:pointer;">❌</button>`;
-        document.getElementById('listaProdotti').appendChild(div);
+        document.getElementById('itemsList').appendChild(div);
     }
 
-    async function inviaDati() {
-        const cliente = document.getElementById('cliente').value;
-        const dataEmissione = document.getElementById('dataEmissione').value;
-        if(!cliente || !dataEmissione) return alert("Inserisci Cliente e Data!");
+    async function submitData() {
+        const cliente = document.getElementById('custName').value;
+        const dataE = document.getElementById('orderDate').value;
+        if(!cliente || !dataE) return alert("Compila Cliente e Data");
 
-        const righe = document.querySelectorAll('.row-prodotto');
-        const idOrdine = "ORD-" + Math.floor(Math.random()*9000+1000);
-        let payload = { ordini: [] };
+        const items = document.querySelectorAll('.row-item');
+        const idOrd = "ID-" + Math.floor(Math.random()*9000+1000);
+        let bundle = { ordini: [] };
 
-        righe.forEach(r => {
-            const nome = r.querySelector('.p-nome').value;
-            const qta = r.querySelector('.p-qta').value;
-            const stato = r.querySelector('.p-stato').value;
-            if(nome && qta) {
-                payload.ordini.push({ id: idOrdine, dataEmissione: dataEmissione, cliente: cliente, prodotto: nome, quantita: qta, stato: stato });
+        items.forEach(it => {
+            const p = it.querySelector('.in-prod').value;
+            const q = it.querySelector('.in-qty').value;
+            const s = it.querySelector('.in-stat').value;
+            if(p && q) {
+                bundle.ordini.push({ id: idOrd, data: dataE, cliente: cliente, prodotto: p, quantita: q, stato: s });
             }
         });
 
-        document.getElementById('btnSalva').disabled = true;
-        document.getElementById('statusNotifica').textContent = "Invio in corso...";
+        document.getElementById('saveBtn').disabled = true;
+        document.getElementById('notifica').textContent = "⏳ Sincronizzazione con Excel...";
 
         try {
-            await fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(payload) });
-            document.getElementById('statusNotifica').textContent = "✅ Salvato con successo!";
+            await fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(bundle) });
+            document.getElementById('notifica').innerHTML = "<span style='color:green'>✅ ORDINE REGISTRATO!</span>";
             setTimeout(() => location.reload(), 2000);
-        } catch(e) { alert("Errore connessione"); }
+        } catch(e) { 
+            alert("Errore di rete"); 
+            document.getElementById('saveBtn').disabled = false;
+        }
     }
 
-    window.onload = caricaDati;
+    window.onload = fetchTable;
 </script>
 </body>
 </html>

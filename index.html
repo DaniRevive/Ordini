@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Ordini Clienti 2026</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f0f2f5; margin: 0; padding: 20px; }
+        .container { max-width: 1100px; margin: auto; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 8px 16px rgba(0,0,0,0.1); }
+        header { display: flex; justify-content: space-between; align-items: center; border-bottom: 3px solid #18bc9c; margin-bottom: 20px; padding-bottom: 10px; }
+        h2 { color: #2c3e50; margin: 0; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; background: #fff; }
+        th { background: #2c3e50; color: white; padding: 15px; text-align: left; text-transform: uppercase; font-size: 13px; }
+        td { padding: 12px 15px; border-bottom: 1px solid #eee; color: #444; }
+        tr:nth-child(even) { background-color: #f9f9f9; }
+        tr:hover { background-color: #f1f4f6; transition: 0.3s; }
+        .status { padding: 6px 12px; border-radius: 20px; font-size: 0.85em; font-weight: bold; display: inline-block; }
+        /* Colori dinamici per gli stati */
+        .completato { background: #d4edda; color: #155724; }
+        .attesa { background: #fff3cd; color: #856404; }
+        .annullato { background: #f8d7da; color: #721c24; }
+        #loading { text-align: center; padding: 40px; font-style: italic; color: #7f8c8d; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h2>📦 Registro Ordini Real-Time</h2>
+        <small id="lastUpdate"></small>
+    </header>
+    
+    <div id="loading">Connessione al database Google Sheets in corso...</div>
+    
+    <table id="orderTable" style="display:none;">
+        <thead>
+            <tr id="headerRow"></tr>
+        </thead>
+        <tbody id="tableBody"></tbody>
+    </table>
+</div>
+
+<script>
+    // LINK CORRETTO: Ho trasformato il tuo link in formato export CSV
+    const public_url = 'https://docs.google.com/spreadsheets/d/1uwMmxJAPnlgceN3pNalS_JA9onxGd9hBO3xvMGyC4Lc/export?format=csv';
+
+    function loadData() {
+        Papa.parse(public_url, {
+            download: true,
+            header: true,
+            skipEmptyLines: true,
+            complete: function(results) {
+                const data = results.data;
+                if(data.length === 0) {
+                    document.getElementById('loading').textContent = "Errore: Nessun dato trovato nel foglio.";
+                    return;
+                }
+
+                const tableBody = document.getElementById('tableBody');
+                const headerRow = document.getElementById('headerRow');
+                
+                // 1. Pulisci e crea Intestazioni
+                headerRow.innerHTML = '';
+                Object.keys(data[0]).forEach(key => {
+                    let th = document.createElement('th');
+                    th.textContent = key;
+                    headerRow.appendChild(th);
+                });
+
+                // 2. Inserisci Righe
+                tableBody.innerHTML = '';
+                data.forEach(row => {
+                    let tr = document.createElement('tr');
+                    Object.values(row).forEach(val => {
+                        let td = document.createElement('td');
+                        
+                        // Gestione grafica degli stati
+                        let lowerVal = val.toLowerCase().trim();
+                        if(lowerVal === 'completato' || lowerVal === 'pagato') {
+                            td.innerHTML = `<span class="status completato">${val}</span>`;
+                        } else if(lowerVal === 'attesa' || lowerVal === 'in corso') {
+                            td.innerHTML = `<span class="status attesa">${val}</span>`;
+                        } else if(lowerVal === 'annullato') {
+                            td.innerHTML = `<span class="status annullato">${val}</span>`;
+                        } else {
+                            td.textContent = val;
+                        }
+                        
+                        tr.appendChild(td);
+                    });
+                    tableBody.appendChild(tr);
+                });
+
+                // Mostra tabella e nascondi loading
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('orderTable').style.display = 'table';
+                document.getElementById('lastUpdate').textContent = 'Ultimo aggiornamento: ' + new Date().toLocaleTimeString();
+            },
+            error: function(err) {
+                document.getElementById('loading').innerHTML = "❌ Errore di connessione. Assicurati che il foglio sia <b>Pubblicato sul Web</b>.";
+            }
+        });
+    }
+
+    // Carica i dati all'avvio
+    window.onload = loadData;
+    // Aggiorna automaticamente ogni 60 secondi
+    setInterval(loadData, 60000);
+</script>
+
+</body>
+</html>

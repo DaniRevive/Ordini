@@ -3,126 +3,120 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestione Ordini Multi-Prodotto</title>
+    <title>Sistema Ordini Corretto</title>
     <style>
-        body { font-family: 'Segoe UI', sans-serif; background: #f4f7f6; padding: 20px; }
-        .container { max-width: 900px; margin: auto; background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
-        .section { margin-bottom: 20px; padding: 15px; border: 1px solid #eee; border-radius: 8px; }
-        .prodotto-row { display: flex; gap: 10px; margin-bottom: 10px; padding: 10px; background: #f9f9f9; border-radius: 5px; }
-        input, select { padding: 10px; border: 1px solid #ccc; border-radius: 5px; }
-        .btn-add { background: #3498db; color: white; border: none; padding: 10px; cursor: pointer; margin-bottom: 20px; border-radius: 5px; }
-        .btn-save { background: #18bc9c; color: white; border: none; padding: 15px; cursor: pointer; border-radius: 5px; width: 100%; font-weight: bold; }
-        .hidden { display: none; }
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        th { background: #2c3e50; color: white; padding: 10px; }
-        td { padding: 10px; border-bottom: 1px solid #ddd; text-align: left; }
+        body { font-family: sans-serif; background: #f4f7f6; padding: 20px; }
+        .container { max-width: 800px; margin: auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .row { display: flex; gap: 10px; margin-bottom: 10px; border-bottom: 1px solid #eee; padding-bottom: 10px; }
+        input, select { padding: 10px; border: 1px solid #ddd; border-radius: 4px; }
+        .btn-add { background: #3498db; color: white; border: none; padding: 10px; cursor: pointer; border-radius: 4px; margin-bottom: 15px; }
+        .btn-save { background: #27ae60; color: white; border: none; padding: 15px; cursor: pointer; border-radius: 4px; width: 100%; font-size: 16px; font-weight: bold; }
+        #status { text-align: center; margin-top: 15px; font-weight: bold; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h2>📦 Nuovo Ordine Multi-Prodotto</h2>
-
-    <div id="loginSection" class="section">
-        <input type="password" id="adminPass" placeholder="Password">
-        <button onclick="login()" style="padding:10px; cursor:pointer;">Accedi</button>
+    <h2>📝 Nuovo Ordine</h2>
+    
+    <div style="margin-bottom:20px;">
+        <label><b>Cliente:</b></label><br>
+        <input type="text" id="cliente" placeholder="Nome e Cognome" style="width:100%; margin-top:5px;">
     </div>
 
-    <div id="inputSection" class="section hidden">
-        <div style="margin-bottom: 20px;">
-            <label><b>Nome Cliente:</b></label>
-            <input type="text" id="cliente" placeholder="Nome Cliente" style="width: 100%;">
+    <div id="lista-prodotti">
+        <div class="row">
+            <input type="text" placeholder="Prodotto" class="p-nome" style="flex:2;">
+            <input type="number" placeholder="Prezzo" class="p-prezzo" style="flex:1;">
+            <select class="p-stato">
+                <option value="In Attesa">In Attesa</option>
+                <option value="Saldato">Saldato</option>
+            </select>
         </div>
-
-        <div id="listaProdotti">
-            <div class="prodotto-row">
-                <input type="text" placeholder="Nome Prodotto" class="p-nome" style="flex: 2;">
-                <input type="number" placeholder="Prezzo €" class="p-prezzo" style="flex: 1;">
-                <select class="p-stato" style="flex: 1;">
-                    <option value="In Attesa">In Attesa</option>
-                    <option value="Pagato">Pagato</option>
-                </select>
-            </div>
-        </div>
-
-        <button class="btn-add" onclick="aggiungiRiga()">+ Aggiungi un altro prodotto</button>
-        <button class="btn-save" id="btnInvia" onclick="inviaTutto()">Salva tutti i prodotti su Excel</button>
-        <p id="statusMsg" style="text-align:center; margin-top:10px;"></p>
     </div>
+
+    <button type="button" class="btn-add" onclick="aggiungiRiga()">+ Aggiungi Prodotto</button>
+    <button type="button" class="btn-save" id="btnInvia" onclick="inviaDati()">SALVA SU EXCEL</button>
+    
+    <div id="status"></div>
 </div>
 
 <script>
-    const SCRIPT_URL = 'IL_TUO_URL_APPS_SCRIPT_QUI';
-    const PASS_CORRETTA = "1234";
-
-    function login() {
-        if(document.getElementById('adminPass').value === PASS_CORRETTA) {
-            document.getElementById('loginSection').classList.add('hidden');
-            document.getElementById('inputSection').classList.remove('hidden');
-        } else { alert("Sbagliata!"); }
-    }
+    // ⚠️ INCOLLA QUI IL TUO URL DI GOOGLE APPS SCRIPT (quello che finisce con /exec)
+    const WEB_APP_URL = 'IL_TUO_URL_QUI';
 
     function aggiungiRiga() {
-        const div = document.createElement('div');
-        div.className = 'prodotto-row';
-        div.innerHTML = `
-            <input type="text" placeholder="Nome Prodotto" class="p-nome" style="flex: 2;">
-            <input type="number" placeholder="Prezzo €" class="p-prezzo" style="flex: 1;">
-            <select class="p-stato" style="flex: 1;">
+        const riga = document.createElement('div');
+        riga.className = 'row';
+        riga.innerHTML = `
+            <input type="text" placeholder="Prodotto" class="p-nome" style="flex:2;">
+            <input type="number" placeholder="Prezzo" class="p-prezzo" style="flex:1;">
+            <select class="p-stato">
                 <option value="In Attesa">In Attesa</option>
-                <option value="Pagato">Pagato</option>
+                <option value="Saldato">Saldato</option>
             </select>
-            <button onclick="this.parentElement.remove()" style="background:red; color:white; border:none; border-radius:5px; cursor:pointer;">X</button>
+            <button onclick="this.parentElement.remove()" style="background:red; color:white; border:none; border-radius:4px; padding:0 10px; cursor:pointer;">X</button>
         `;
-        document.getElementById('listaProdotti').appendChild(div);
+        document.getElementById('lista-prodotti').appendChild(riga);
     }
 
-    async function inviaTutto() {
+    async function inviaDati() {
         const cliente = document.getElementById('cliente').value;
-        if(!cliente) return alert("Inserisci il nome cliente!");
+        if (!cliente) return alert("Inserisci il nome del cliente!");
 
-        const righe = document.querySelectorAll('.prodotto-row');
+        const righe = document.querySelectorAll('.row');
         const dataOggi = new Date().toLocaleDateString('it-IT');
-        const idOrdine = "#" + Math.floor(1000 + Math.random() * 9000);
+        const idOrdine = "ORD-" + Math.floor(Date.now() / 1000).toString().slice(-5);
         
-        const payload = { ordini: [] };
+        let listaOrdini = [];
 
-        righe.forEach(riga => {
-            const nomeP = riga.querySelector('.p-nome').value;
-            const prezzoP = riga.querySelector('.p-prezzo').value;
-            const statoP = riga.querySelector('.p-stato').value;
-
-            if(nomeP && prezzoP) {
-                payload.ordini.push({
+        righe.forEach(r => {
+            const nome = r.querySelector('.p-nome').value;
+            const prezzo = r.querySelector('.p-prezzo').value;
+            const stato = r.querySelector('.p-stato').value;
+            
+            if (nome && prezzo) {
+                listaOrdini.push({
                     id: idOrdine,
                     data: dataOggi,
                     cliente: cliente,
-                    prodotto: nomeP,
-                    totale: prezzoP,
-                    stato: statoP
+                    prodotto: nome,
+                    prezzo: prezzo,
+                    stato: stato
                 });
             }
         });
 
-        if(payload.ordini.length === 0) return alert("Aggiungi almeno un prodotto!");
+        if (listaOrdini.length === 0) return alert("Inserisci almeno un prodotto!");
 
         const btn = document.getElementById('btnInvia');
+        const status = document.getElementById('status');
+        
         btn.disabled = true;
-        document.getElementById('statusMsg').textContent = "Invio in corso...";
+        status.innerHTML = "⏳ Invio in corso...";
+        status.style.color = "blue";
 
         try {
-            await fetch(SCRIPT_URL, {
+            await fetch(WEB_APP_URL, {
                 method: 'POST',
                 mode: 'no-cors',
-                body: JSON.stringify(payload)
+                body: JSON.stringify({ ordini: listaOrdini })
             });
-            document.getElementById('statusMsg').textContent = "✅ Successo! Dati inviati a Excel.";
-            setTimeout(() => location.reload(), 2000);
-        } catch (e) {
-            alert("Errore");
+
+            status.innerHTML = "✅ DATI INVIATI! Il foglio si aggiornerà tra pochi secondi.";
+            status.style.color = "green";
+            
+            setTimeout(() => {
+                location.reload();
+            }, 3000);
+
+        } catch (error) {
+            status.innerHTML = "❌ Errore durante l'invio.";
+            status.style.color = "red";
             btn.disabled = false;
         }
     }
 </script>
+
 </body>
 </html>

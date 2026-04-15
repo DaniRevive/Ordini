@@ -3,145 +3,126 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sistema Ordini Excel</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
+    <title>Gestione Ordini Multi-Prodotto</title>
     <style>
-        body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; padding: 20px; }
+        body { font-family: 'Segoe UI', sans-serif; background: #f4f7f6; padding: 20px; }
         .container { max-width: 900px; margin: auto; background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
-        .section { margin-bottom: 30px; padding: 15px; border: 1px solid #eee; border-radius: 8px; }
-        h2 { color: #2c3e50; border-bottom: 2px solid #18bc9c; padding-bottom: 5px; }
-        input, select { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; }
-        button { background: #18bc9c; color: white; border: none; padding: 12px; cursor: pointer; border-radius: 6px; width: 100%; font-weight: bold; }
-        button:hover { background: #148f77; }
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 14px; }
-        th { background: #2c3e50; color: white; padding: 10px; text-align: left; }
-        td { padding: 10px; border-bottom: 1px solid #ddd; }
+        .section { margin-bottom: 20px; padding: 15px; border: 1px solid #eee; border-radius: 8px; }
+        .prodotto-row { display: flex; gap: 10px; margin-bottom: 10px; padding: 10px; background: #f9f9f9; border-radius: 5px; }
+        input, select { padding: 10px; border: 1px solid #ccc; border-radius: 5px; }
+        .btn-add { background: #3498db; color: white; border: none; padding: 10px; cursor: pointer; margin-bottom: 20px; border-radius: 5px; }
+        .btn-save { background: #18bc9c; color: white; border: none; padding: 15px; cursor: pointer; border-radius: 5px; width: 100%; font-weight: bold; }
         .hidden { display: none; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th { background: #2c3e50; color: white; padding: 10px; }
+        td { padding: 10px; border-bottom: 1px solid #ddd; text-align: left; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h2>📦 Gestione Ordini</h2>
+    <h2>📦 Nuovo Ordine Multi-Prodotto</h2>
 
     <div id="loginSection" class="section">
-        <h3>Accedi per inserire dati</h3>
-        <input type="password" id="adminPass" placeholder="Inserisci Password">
-        <button onclick="login()">Sblocca Inserimento</button>
+        <input type="password" id="adminPass" placeholder="Password">
+        <button onclick="login()" style="padding:10px; cursor:pointer;">Accedi</button>
     </div>
 
     <div id="inputSection" class="section hidden">
-        <h3>Nuovo Ordine</h3>
-        <input type="text" id="cliente" placeholder="Nome Cliente">
-        <input type="text" id="prodotto" placeholder="Cosa ha ordinato?">
-        <input type="number" id="totale" placeholder="Importo Totale €">
-        <select id="stato">
-            <option value="In Attesa">In Attesa</option>
-            <option value="Completato">Completato</option>
-            <option value="Pagato">Pagato</option>
-        </select>
-        <button id="btnInvia" onclick="salvaSuExcel()">Salva su Excel</button>
-        <p id="statusMsg" style="text-align:center; font-weight:bold;"></p>
-    </div>
+        <div style="margin-bottom: 20px;">
+            <label><b>Nome Cliente:</b></label>
+            <input type="text" id="cliente" placeholder="Nome Cliente" style="width: 100%;">
+        </div>
 
-    <div class="section">
-        <h3>Registro Ordini Attuali</h3>
-        <div id="loading">Caricamento dati...</div>
-        <table id="tabellaOrdini">
-            <thead><tr id="headers"></tr></thead>
-            <tbody id="corpoTabella"></tbody>
-        </table>
+        <div id="listaProdotti">
+            <div class="prodotto-row">
+                <input type="text" placeholder="Nome Prodotto" class="p-nome" style="flex: 2;">
+                <input type="number" placeholder="Prezzo €" class="p-prezzo" style="flex: 1;">
+                <select class="p-stato" style="flex: 1;">
+                    <option value="In Attesa">In Attesa</option>
+                    <option value="Pagato">Pagato</option>
+                </select>
+            </div>
+        </div>
+
+        <button class="btn-add" onclick="aggiungiRiga()">+ Aggiungi un altro prodotto</button>
+        <button class="btn-save" id="btnInvia" onclick="inviaTutto()">Salva tutti i prodotti su Excel</button>
+        <p id="statusMsg" style="text-align:center; margin-top:10px;"></p>
     </div>
 </div>
 
 <script>
-    // --- CONFIGURAZIONE ---
-    const SCRIPT_URL = 'INSERISCI_QUI_IL_TUO_URL_APPS_SCRIPT'; // Incolla l'URL /exec qui
-    const CSV_URL = 'https://docs.google.com/spreadsheets/d/1uwMmxJAPnlgceN3pNalS_JA9onxGd9hBO3xvMGyC4Lc/export?format=csv';
-    const PASSWORD_CORRETTA = "1234"; // Cambiala a tuo piacimento
+    const SCRIPT_URL = 'IL_TUO_URL_APPS_SCRIPT_QUI';
+    const PASS_CORRETTA = "1234";
 
-    // LOGIN
     function login() {
-        const pass = document.getElementById('adminPass').value;
-        if(pass === PASSWORD_CORRETTA) {
+        if(document.getElementById('adminPass').value === PASS_CORRETTA) {
             document.getElementById('loginSection').classList.add('hidden');
             document.getElementById('inputSection').classList.remove('hidden');
-        } else {
-            alert("Password errata!");
-        }
+        } else { alert("Sbagliata!"); }
     }
 
-    // SALVATAGGIO DATI
-    async function salvaSuExcel() {
-        const btn = document.getElementById('btnInvia');
-        const msg = document.getElementById('statusMsg');
+    function aggiungiRiga() {
+        const div = document.createElement('div');
+        div.className = 'prodotto-row';
+        div.innerHTML = `
+            <input type="text" placeholder="Nome Prodotto" class="p-nome" style="flex: 2;">
+            <input type="number" placeholder="Prezzo €" class="p-prezzo" style="flex: 1;">
+            <select class="p-stato" style="flex: 1;">
+                <option value="In Attesa">In Attesa</option>
+                <option value="Pagato">Pagato</option>
+            </select>
+            <button onclick="this.parentElement.remove()" style="background:red; color:white; border:none; border-radius:5px; cursor:pointer;">X</button>
+        `;
+        document.getElementById('listaProdotti').appendChild(div);
+    }
+
+    async function inviaTutto() {
+        const cliente = document.getElementById('cliente').value;
+        if(!cliente) return alert("Inserisci il nome cliente!");
+
+        const righe = document.querySelectorAll('.prodotto-row');
+        const dataOggi = new Date().toLocaleDateString('it-IT');
+        const idOrdine = "#" + Math.floor(1000 + Math.random() * 9000);
         
-        const nuovoOrdine = {
-            id: "#" + Math.floor(1000 + Math.random() * 9000),
-            data: new Date().toLocaleDateString('it-IT'),
-            cliente: document.getElementById('cliente').value,
-            prodotto: document.getElementById('prodotto').value,
-            totale: document.getElementById('totale').value,
-            stato: document.getElementById('stato').value
-        };
+        const payload = { ordini: [] };
 
-        if(!nuovoOrdine.cliente || !nuovoOrdine.totale) {
-            alert("Compila i campi Cliente e Totale!");
-            return;
-        }
+        righe.forEach(riga => {
+            const nomeP = riga.querySelector('.p-nome').value;
+            const prezzoP = riga.querySelector('.p-prezzo').value;
+            const statoP = riga.querySelector('.p-stato').value;
 
+            if(nomeP && prezzoP) {
+                payload.ordini.push({
+                    id: idOrdine,
+                    data: dataOggi,
+                    cliente: cliente,
+                    prodotto: nomeP,
+                    totale: prezzoP,
+                    stato: statoP
+                });
+            }
+        });
+
+        if(payload.ordini.length === 0) return alert("Aggiungi almeno un prodotto!");
+
+        const btn = document.getElementById('btnInvia');
         btn.disabled = true;
-        msg.style.color = "orange";
-        msg.textContent = "Invio in corso...";
+        document.getElementById('statusMsg').textContent = "Invio in corso...";
 
         try {
             await fetch(SCRIPT_URL, {
                 method: 'POST',
                 mode: 'no-cors',
-                body: JSON.stringify(nuovoOrdine)
+                body: JSON.stringify(payload)
             });
-            
-            msg.style.color = "green";
-            msg.textContent = "✅ Salvato! Ricarico la tabella...";
-            
-            // Pulisce campi
-            document.getElementById('cliente').value = '';
-            document.getElementById('prodotto').value = '';
-            document.getElementById('totale').value = '';
-
-            setTimeout(() => { location.reload(); }, 1500);
+            document.getElementById('statusMsg').textContent = "✅ Successo! Dati inviati a Excel.";
+            setTimeout(() => location.reload(), 2000);
         } catch (e) {
-            msg.style.color = "red";
-            msg.textContent = "Errore durante il salvataggio.";
+            alert("Errore");
             btn.disabled = false;
         }
     }
-
-    // CARICAMENTO TABELLA
-    function caricaTabella() {
-        Papa.parse(CSV_URL, {
-            download: true,
-            header: true,
-            complete: function(results) {
-                const data = results.data;
-                const body = document.getElementById('corpoTabella');
-                const head = document.getElementById('headers');
-                
-                if(data.length > 0) {
-                    Object.keys(data[0]).forEach(h => head.innerHTML += `<th>${h}</th>`);
-                    data.forEach(row => {
-                        let tr = "<tr>";
-                        Object.values(row).forEach(v => tr += `<td>${v}</td>`);
-                        body.innerHTML += tr + "</tr>";
-                    });
-                }
-                document.getElementById('loading').style.display = 'none';
-            }
-        });
-    }
-
-    window.onload = caricaTabella;
 </script>
-
 </body>
 </html>

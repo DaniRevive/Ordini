@@ -3,91 +3,144 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestione Ordini Protetta</title>
+    <title>Sistema Ordini Excel</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
     <style>
-        body { font-family: sans-serif; background: #f4f7f6; padding: 20px; }
-        .container { max-width: 800px; margin: auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-        .admin-section { border: 2px solid #18bc9c; padding: 20px; margin-top: 20px; border-radius: 8px; display: none; }
-        input, select { width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box; }
-        button { background: #18bc9c; color: white; border: none; padding: 10px 20px; cursor: pointer; border-radius: 5px; width: 100%; }
-        #loginBox { text-align: center; padding: 20px; }
+        body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; padding: 20px; }
+        .container { max-width: 900px; margin: auto; background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        .section { margin-bottom: 30px; padding: 15px; border: 1px solid #eee; border-radius: 8px; }
+        h2 { color: #2c3e50; border-bottom: 2px solid #18bc9c; padding-bottom: 5px; }
+        input, select { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; }
+        button { background: #18bc9c; color: white; border: none; padding: 12px; cursor: pointer; border-radius: 6px; width: 100%; font-weight: bold; }
+        button:hover { background: #148f77; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 14px; }
+        th { background: #2c3e50; color: white; padding: 10px; text-align: left; }
+        td { padding: 10px; border-bottom: 1px solid #ddd; }
+        .hidden { display: none; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h2>📦 Registro Ordini</h2>
+    <h2>📦 Gestione Ordini</h2>
 
-    <div id="loginBox">
-        <h3>Area Riservata Inserimento</h3>
-        <input type="text" id="user" placeholder="Username">
-        <input type="password" id="pass" placeholder="Password">
-        <button onclick="checkLogin()">Accedi per Aggiungere</button>
+    <div id="loginSection" class="section">
+        <h3>Accedi per inserire dati</h3>
+        <input type="password" id="adminPass" placeholder="Inserisci Password">
+        <button onclick="login()">Sblocca Inserimento</button>
     </div>
 
-    <div id="adminForm" class="admin-section">
-        <h3>Aggiungi Nuovo Ordine</h3>
+    <div id="inputSection" class="section hidden">
+        <h3>Nuovo Ordine</h3>
         <input type="text" id="cliente" placeholder="Nome Cliente">
-        <input type="text" id="prodotto" placeholder="Prodotto/Servizio">
-        <input type="number" id="totale" placeholder="Totale €">
+        <input type="text" id="prodotto" placeholder="Cosa ha ordinato?">
+        <input type="number" id="totale" placeholder="Importo Totale €">
         <select id="stato">
             <option value="In Attesa">In Attesa</option>
             <option value="Completato">Completato</option>
+            <option value="Pagato">Pagato</option>
         </select>
-        <button onclick="inviaOrdine()">Invia al Database</button>
-        <p id="msg" style="color: green; display:none;">Ordine inviato correttamente!</p>
+        <button id="btnInvia" onclick="salvaSuExcel()">Salva su Excel</button>
+        <p id="statusMsg" style="text-align:center; font-weight:bold;"></p>
+    </div>
+
+    <div class="section">
+        <h3>Registro Ordini Attuali</h3>
+        <div id="loading">Caricamento dati...</div>
+        <table id="tabellaOrdini">
+            <thead><tr id="headers"></tr></thead>
+            <tbody id="corpoTabella"></tbody>
+        </table>
     </div>
 </div>
 
 <script>
-    const GOOGLE_SCRIPT_URL = 'INSERISCI_QUI_URL_APPS_SCRIPT'; // Incolla qui l'URL del punto 2
-    
-    // Credenziali semplici (cambiale qui)
-    const ADMIN_USER = "admin";
-    const ADMIN_PASS = "1234";
+    // --- CONFIGURAZIONE ---
+    const SCRIPT_URL = 'INSERISCI_QUI_IL_TUO_URL_APPS_SCRIPT'; // Incolla l'URL /exec qui
+    const CSV_URL = 'https://docs.google.com/spreadsheets/d/1uwMmxJAPnlgceN3pNalS_JA9onxGd9hBO3xvMGyC4Lc/export?format=csv';
+    const PASSWORD_CORRETTA = "1234"; // Cambiala a tuo piacimento
 
-    function checkLogin() {
-        const u = document.getElementById('user').value;
-        const p = document.getElementById('pass').value;
-        if(u === ADMIN_USER && p === ADMIN_PASS) {
-            document.getElementById('loginBox').style.display = 'none';
-            document.getElementById('adminForm').style.display = 'block';
+    // LOGIN
+    function login() {
+        const pass = document.getElementById('adminPass').value;
+        if(pass === PASSWORD_CORRETTA) {
+            document.getElementById('loginSection').classList.add('hidden');
+            document.getElementById('inputSection').classList.remove('hidden');
         } else {
-            alert("Credenziali errate!");
+            alert("Password errata!");
         }
     }
 
-    async function inviaOrdine() {
-        const data = {
-            id: "#" + Math.floor(Math.random() * 1000),
+    // SALVATAGGIO DATI
+    async function salvaSuExcel() {
+        const btn = document.getElementById('btnInvia');
+        const msg = document.getElementById('statusMsg');
+        
+        const nuovoOrdine = {
+            id: "#" + Math.floor(1000 + Math.random() * 9000),
+            data: new Date().toLocaleDateString('it-IT'),
             cliente: document.getElementById('cliente').value,
             prodotto: document.getElementById('prodotto').value,
             totale: document.getElementById('totale').value,
             stato: document.getElementById('stato').value
         };
 
-        if(!data.cliente || !data.totale) return alert("Compila i campi!");
+        if(!nuovoOrdine.cliente || !nuovoOrdine.totale) {
+            alert("Compila i campi Cliente e Totale!");
+            return;
+        }
+
+        btn.disabled = true;
+        msg.style.color = "orange";
+        msg.textContent = "Invio in corso...";
 
         try {
-            // Invio dati a Google Sheets
-            await fetch(GOOGLE_SCRIPT_URL, {
+            await fetch(SCRIPT_URL, {
                 method: 'POST',
                 mode: 'no-cors',
-                cache: 'no-cache',
-                body: JSON.stringify(data)
+                body: JSON.stringify(nuovoOrdine)
             });
             
-            document.getElementById('msg').style.display = 'block';
-            // Pulisce i campi
+            msg.style.color = "green";
+            msg.textContent = "✅ Salvato! Ricarico la tabella...";
+            
+            // Pulisce campi
             document.getElementById('cliente').value = '';
             document.getElementById('prodotto').value = '';
             document.getElementById('totale').value = '';
-            
-            setTimeout(() => { location.reload(); }, 2000); // Ricarica per vedere il nuovo ordine
+
+            setTimeout(() => { location.reload(); }, 1500);
         } catch (e) {
-            alert("Errore durante l'invio");
+            msg.style.color = "red";
+            msg.textContent = "Errore durante il salvataggio.";
+            btn.disabled = false;
         }
     }
+
+    // CARICAMENTO TABELLA
+    function caricaTabella() {
+        Papa.parse(CSV_URL, {
+            download: true,
+            header: true,
+            complete: function(results) {
+                const data = results.data;
+                const body = document.getElementById('corpoTabella');
+                const head = document.getElementById('headers');
+                
+                if(data.length > 0) {
+                    Object.keys(data[0]).forEach(h => head.innerHTML += `<th>${h}</th>`);
+                    data.forEach(row => {
+                        let tr = "<tr>";
+                        Object.values(row).forEach(v => tr += `<td>${v}</td>`);
+                        body.innerHTML += tr + "</tr>";
+                    });
+                }
+                document.getElementById('loading').style.display = 'none';
+            }
+        });
+    }
+
+    window.onload = caricaTabella;
 </script>
 
 </body>

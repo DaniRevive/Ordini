@@ -3,110 +3,91 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard Ordini Clienti 2026</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
+    <title>Gestione Ordini Protetta</title>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f0f2f5; margin: 0; padding: 20px; }
-        .container { max-width: 1100px; margin: auto; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 8px 16px rgba(0,0,0,0.1); }
-        header { display: flex; justify-content: space-between; align-items: center; border-bottom: 3px solid #18bc9c; margin-bottom: 20px; padding-bottom: 10px; }
-        h2 { color: #2c3e50; margin: 0; }
-        table { width: 100%; border-collapse: collapse; margin-top: 10px; background: #fff; }
-        th { background: #2c3e50; color: white; padding: 15px; text-align: left; text-transform: uppercase; font-size: 13px; }
-        td { padding: 12px 15px; border-bottom: 1px solid #eee; color: #444; }
-        tr:nth-child(even) { background-color: #f9f9f9; }
-        tr:hover { background-color: #f1f4f6; transition: 0.3s; }
-        .status { padding: 6px 12px; border-radius: 20px; font-size: 0.85em; font-weight: bold; display: inline-block; }
-        /* Colori dinamici per gli stati */
-        .completato { background: #d4edda; color: #155724; }
-        .attesa { background: #fff3cd; color: #856404; }
-        .annullato { background: #f8d7da; color: #721c24; }
-        #loading { text-align: center; padding: 40px; font-style: italic; color: #7f8c8d; }
+        body { font-family: sans-serif; background: #f4f7f6; padding: 20px; }
+        .container { max-width: 800px; margin: auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .admin-section { border: 2px solid #18bc9c; padding: 20px; margin-top: 20px; border-radius: 8px; display: none; }
+        input, select { width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box; }
+        button { background: #18bc9c; color: white; border: none; padding: 10px 20px; cursor: pointer; border-radius: 5px; width: 100%; }
+        #loginBox { text-align: center; padding: 20px; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <header>
-        <h2>📦 Registro Ordini Real-Time</h2>
-        <small id="lastUpdate"></small>
-    </header>
-    
-    <div id="loading">Connessione al database Google Sheets in corso...</div>
-    
-    <table id="orderTable" style="display:none;">
-        <thead>
-            <tr id="headerRow"></tr>
-        </thead>
-        <tbody id="tableBody"></tbody>
-    </table>
+    <h2>📦 Registro Ordini</h2>
+
+    <div id="loginBox">
+        <h3>Area Riservata Inserimento</h3>
+        <input type="text" id="user" placeholder="Username">
+        <input type="password" id="pass" placeholder="Password">
+        <button onclick="checkLogin()">Accedi per Aggiungere</button>
+    </div>
+
+    <div id="adminForm" class="admin-section">
+        <h3>Aggiungi Nuovo Ordine</h3>
+        <input type="text" id="cliente" placeholder="Nome Cliente">
+        <input type="text" id="prodotto" placeholder="Prodotto/Servizio">
+        <input type="number" id="totale" placeholder="Totale €">
+        <select id="stato">
+            <option value="In Attesa">In Attesa</option>
+            <option value="Completato">Completato</option>
+        </select>
+        <button onclick="inviaOrdine()">Invia al Database</button>
+        <p id="msg" style="color: green; display:none;">Ordine inviato correttamente!</p>
+    </div>
 </div>
 
 <script>
-    // LINK CORRETTO: Ho trasformato il tuo link in formato export CSV
-    const public_url = 'https://docs.google.com/spreadsheets/d/1uwMmxJAPnlgceN3pNalS_JA9onxGd9hBO3xvMGyC4Lc/export?format=csv';
+    const GOOGLE_SCRIPT_URL = 'INSERISCI_QUI_URL_APPS_SCRIPT'; // Incolla qui l'URL del punto 2
+    
+    // Credenziali semplici (cambiale qui)
+    const ADMIN_USER = "admin";
+    const ADMIN_PASS = "1234";
 
-    function loadData() {
-        Papa.parse(public_url, {
-            download: true,
-            header: true,
-            skipEmptyLines: true,
-            complete: function(results) {
-                const data = results.data;
-                if(data.length === 0) {
-                    document.getElementById('loading').textContent = "Errore: Nessun dato trovato nel foglio.";
-                    return;
-                }
-
-                const tableBody = document.getElementById('tableBody');
-                const headerRow = document.getElementById('headerRow');
-                
-                // 1. Pulisci e crea Intestazioni
-                headerRow.innerHTML = '';
-                Object.keys(data[0]).forEach(key => {
-                    let th = document.createElement('th');
-                    th.textContent = key;
-                    headerRow.appendChild(th);
-                });
-
-                // 2. Inserisci Righe
-                tableBody.innerHTML = '';
-                data.forEach(row => {
-                    let tr = document.createElement('tr');
-                    Object.values(row).forEach(val => {
-                        let td = document.createElement('td');
-                        
-                        // Gestione grafica degli stati
-                        let lowerVal = val.toLowerCase().trim();
-                        if(lowerVal === 'completato' || lowerVal === 'pagato') {
-                            td.innerHTML = `<span class="status completato">${val}</span>`;
-                        } else if(lowerVal === 'attesa' || lowerVal === 'in corso') {
-                            td.innerHTML = `<span class="status attesa">${val}</span>`;
-                        } else if(lowerVal === 'annullato') {
-                            td.innerHTML = `<span class="status annullato">${val}</span>`;
-                        } else {
-                            td.textContent = val;
-                        }
-                        
-                        tr.appendChild(td);
-                    });
-                    tableBody.appendChild(tr);
-                });
-
-                // Mostra tabella e nascondi loading
-                document.getElementById('loading').style.display = 'none';
-                document.getElementById('orderTable').style.display = 'table';
-                document.getElementById('lastUpdate').textContent = 'Ultimo aggiornamento: ' + new Date().toLocaleTimeString();
-            },
-            error: function(err) {
-                document.getElementById('loading').innerHTML = "❌ Errore di connessione. Assicurati che il foglio sia <b>Pubblicato sul Web</b>.";
-            }
-        });
+    function checkLogin() {
+        const u = document.getElementById('user').value;
+        const p = document.getElementById('pass').value;
+        if(u === ADMIN_USER && p === ADMIN_PASS) {
+            document.getElementById('loginBox').style.display = 'none';
+            document.getElementById('adminForm').style.display = 'block';
+        } else {
+            alert("Credenziali errate!");
+        }
     }
 
-    // Carica i dati all'avvio
-    window.onload = loadData;
-    // Aggiorna automaticamente ogni 60 secondi
-    setInterval(loadData, 60000);
+    async function inviaOrdine() {
+        const data = {
+            id: "#" + Math.floor(Math.random() * 1000),
+            cliente: document.getElementById('cliente').value,
+            prodotto: document.getElementById('prodotto').value,
+            totale: document.getElementById('totale').value,
+            stato: document.getElementById('stato').value
+        };
+
+        if(!data.cliente || !data.totale) return alert("Compila i campi!");
+
+        try {
+            // Invio dati a Google Sheets
+            await fetch(GOOGLE_SCRIPT_URL, {
+                method: 'POST',
+                mode: 'no-cors',
+                cache: 'no-cache',
+                body: JSON.stringify(data)
+            });
+            
+            document.getElementById('msg').style.display = 'block';
+            // Pulisce i campi
+            document.getElementById('cliente').value = '';
+            document.getElementById('prodotto').value = '';
+            document.getElementById('totale').value = '';
+            
+            setTimeout(() => { location.reload(); }, 2000); // Ricarica per vedere il nuovo ordine
+        } catch (e) {
+            alert("Errore durante l'invio");
+        }
+    }
 </script>
 
 </body>
